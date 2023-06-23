@@ -31,12 +31,6 @@ services:
 
   backend:
     image: ${DOCKER_USERNAME}/current-paychecks:latest
-    build:
-      context: ../backend
-      dockerfile: Dockerfile
-      args:
-        SECRET_KEY: ${SECRET_KEY}
-        DATABASE_URL: ${DATABASE_URL}
     ports:
      - "8000:8000"
     depends_on:
