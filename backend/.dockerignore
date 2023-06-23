@@ -1,0 +1,12 @@
+**/.git
+**/.gitignore
+**/.vscode
+**/coverage
+**/.aws
+**/.ssh
+**/.DS_Store
+**/venv
+**/__pycache__
+Dockerfile
+README.md
+LICENSE.md

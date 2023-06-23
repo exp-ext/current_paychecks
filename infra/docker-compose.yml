@@ -30,7 +30,7 @@ services:
       - pgadmin_data:/var/lib/pgadmin
 
   backend:
-    image: ${DOCKER_USERNAME}/current_paychecks:latest
+    image: ${DOCKER_USERNAME}/current-paychecks:latest
     build:
       context: ../backend
       dockerfile: Dockerfile

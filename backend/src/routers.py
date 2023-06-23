@@ -4,7 +4,6 @@ from fastapi.openapi.utils import get_openapi
 
 router = APIRouter(
     prefix="/docs",
-    tags=["auth"]
 )
 
 
