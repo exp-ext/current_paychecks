@@ -1,6 +1,7 @@
+import time
+
 import pytest
 from fastapi.testclient import TestClient
-import time
 
 
 class TestBlog:
@@ -16,18 +17,16 @@ class TestBlog:
     def get_auth_client(self, client: TestClient) -> TestClient:
         response = client.post("/api/auth/login/", json=self.USER)
         access_token = response.json()["access_token"]
-        auth_client = TestClient(
+        return TestClient(
             client.app, headers={"Authorization": f"Bearer {access_token}"}
         )
-        return auth_client
 
     def get_auth_client_employee(self, client: TestClient) -> TestClient:
         response = client.post("/api/auth/login/", json=self.USER_EMPLOYEE)
         access_token = response.json()["access_token"]
-        auth_client = TestClient(
+        return TestClient(
             client.app, headers={"Authorization": f"Bearer {access_token}"}
         )
-        return auth_client
 
     def test_register(self, client: TestClient, db):
         for user in [self.USER, self.USER_EMPLOYEE]:

@@ -6,8 +6,8 @@ from sqlalchemy.orm import Session
 from ..config import settings
 from ..database import engine, get_db
 from . import crud, models, schemas
-from .middleware import (create_access_token, get_current_user_if_staff,
-                         get_current_user)
+from .middleware import (create_access_token, get_current_user,
+                         get_current_user_if_staff)
 
 models.Base.metadata.create_all(bind=engine)
 
