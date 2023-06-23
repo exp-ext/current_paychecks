@@ -35,7 +35,7 @@ def create_salary(
     Returns:
     - Созданный объект модели зарплаты.
     """
-    db_user = user_crud.get_user(db, id=salary.employee_id)
+    db_user = user_crud.get_user(db, user_id=salary.employee_id)
     if not db_user:
         raise HTTPException(
             status_code=404, detail="No such user"

@@ -22,15 +22,15 @@ services:
     container_name: pgadmin
     restart: unless-stopped
     environment:
-      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_EMAIL}
-      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_PASSWORD}
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
     ports:
       - 8090:80
     volumes:
       - pgadmin_data:/var/lib/pgadmin
 
   backend:
-    # image: ${DOCKER_USERNAME}/current_paychecks:latest
+    image: ${DOCKER_USERNAME}/current_paychecks:latest
     build:
       context: ../backend
       dockerfile: Dockerfile
