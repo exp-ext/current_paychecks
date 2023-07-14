@@ -1,14 +1,14 @@
 from datetime import datetime, timedelta
 
 import jwt
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException, Security, status
 from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth import crud
 from ..config import settings
-from ..database import get_db
+from ..database import get_async_session
 
 app = FastAPI()
 
@@ -65,14 +65,13 @@ def decode_token(token: str):
 
 
 def get_current_user(
-    token: str = Depends(oauth2_scheme),
+    token: str = Security(oauth2_scheme),
 ) -> dict:
     """
     Получает текущего пользователя.
 
     Args:
     - `token`: Токен доступа пользователя.
-    - `db`: Сессия базы данных.
 
     Returns:
     - Данные текущего пользователя из расшифрованного токена.
@@ -88,16 +87,16 @@ def get_current_user(
     return payload
 
 
-def get_current_user_if_staff(
-    token: str = Depends(oauth2_scheme),
-    db: Session = Depends(get_db)
+async def get_current_user_if_staff(
+    token: str = Security(oauth2_scheme),
+    session: AsyncSession = Depends(get_async_session),
 ) -> dict:
     """
     Проверяет токен текущего юзера и статус staff.
 
     Args:
     - `token`: Токен доступа сотрудника.
-    - `db`: Сессия базы данных.
+    - `session`: Сессия базы данных.
 
     Returns:
     - Данные текущего сотрудника из расшифрованного токена.
@@ -113,7 +112,7 @@ def get_current_user_if_staff(
     if not username:
         raise HTTPException(status_code=401, detail="Invalid token")
 
-    db_user = crud.get_user_by_username(db, username=username)
+    db_user = await crud.get_user_by_username(session, username=username)
     if not db_user.is_staff:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

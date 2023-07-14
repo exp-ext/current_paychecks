@@ -1,34 +1,28 @@
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..auth.models import User
+from ..auth.crud import get_user_by_username
 from . import models, schemas
 
 
-def get_employee_by_id(
-    db: Session,
-    id: int
-):
-    return db.query(User).filter(User.id == id).first()
-
-
-def create_an_employee_salary(
-    db: Session,
+async def create_an_employee_salary(
+    session: AsyncSession,
     salary: schemas.SalaryCreate
 ):
     db_salary = models.Salary(**salary.dict())
-    db.add(db_salary)
-    db.commit()
-    db.refresh(db_salary)
+    session.add(db_salary)
+    await session.commit()
+    await session.refresh(db_salary)
     return db_salary
 
 
-def get_salaries_by_username(
-    db: Session,
+async def get_salaries_by_username(
+    session: AsyncSession,
     username: str
 ):
-    user = db.query(User).join(User.salaries).filter(
-        User.username == username
-    ).first()
-    if user:
-        return user.salaries.all()
-    return []
+    user = await get_user_by_username(session, username)
+    query = (
+        select(models.Salary).where(models.Salary.employee.has(id=user.id))
+    )
+    result = await session.execute(query)
+    return result.scalars().all()

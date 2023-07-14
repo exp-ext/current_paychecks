@@ -1,20 +1,15 @@
 from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config import settings
-from ..database import engine, get_db
-from . import crud, models, schemas
+from ..database import get_async_session
+from . import crud, schemas
 from .middleware import (create_access_token, get_current_user,
                          get_current_user_if_staff)
 
-models.Base.metadata.create_all(bind=engine)
-
-router = APIRouter(
-    prefix="/api/auth",
-    tags=["auth"]
-)
+router = APIRouter()
 
 
 @router.post(
@@ -22,16 +17,16 @@ router = APIRouter(
     response_model=schemas.User,
     status_code=status.HTTP_201_CREATED
 )
-def register(
+async def register(
     user: schemas.UserCreate,
-    db: Session = Depends(get_db)
+    session: AsyncSession = Depends(get_async_session)
 ):
     """
     Регистрация нового пользователя.
 
     Args:
     - `user`: Схема данных пользователя для создания.
-    - `db`: Сессия базы данных.
+    - `session`: Сессия базы данных.
 
     Returns:
     - Созданный пользователь.
@@ -41,25 +36,25 @@ def register(
     "Username already registered",
     если имя пользователя уже зарегистрировано.
     """
-    db_user = crud.get_user_by_username(db, username=user.username)
+    db_user = await crud.get_user_by_username(session, username=user.username)
     if db_user:
         raise HTTPException(
             status_code=400, detail="Username already registered"
         )
-    return crud.create_user(db=db, user=user)
+    return await crud.create_user(session=session, user=user)
 
 
 @router.post("/login/")
 async def login(
     user: schemas.UserLogin,
-    db: Session = Depends(get_db)
+    session: AsyncSession = Depends(get_async_session)
 ):
     """
     Аутентификация пользователя и генерация токена доступа.
 
     Args:
     - `user`: Схема данных пользователя для аутентификации.
-    - `db`: Сессия базы данных.
+    - `session`: Сессия базы данных.
 
     Returns:
     - Токен доступа и тип токена.
@@ -70,9 +65,9 @@ async def login(
     - `HTTPException` с кодом состояния 401 и деталями "Invalid password",
     если введен неправильный пароль.
     """
-    db_user = crud.get_user_by_username(db, username=user.username)
+    db_user = await crud.get_user_by_username(session, username=user.username)
 
-    db_user.login(db)
+    await db_user.login(session)
 
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -97,10 +92,10 @@ async def login(
     response_model=list[schemas.Users],
     dependencies=[Depends(get_current_user_if_staff)]
 )
-def read_users(
+async def read_users(
     skip: int = 0,
     limit: int = 20,
-    db: Session = Depends(get_db),
+    session: AsyncSession = Depends(get_async_session),
 ):
     """
     Возвращает список пользователей.
@@ -109,24 +104,24 @@ def read_users(
     - `skip`: Количество записей, которое следует пропустить (по умолчанию 0).
     - `limit`: Максимальное количество записей, которое следует вернуть
     (по умолчанию 20).
-    - `db`: Сессия базы данных.
+    - `session`: Сессия базы данных.
 
     Returns:
     - Список пользователей.
     """
-    return crud.get_users(db, skip=skip, limit=limit)
+    return await crud.get_users(session, skip=skip, limit=limit)
 
 
 @router.get("/users/me/", response_model=schemas.User)
-def read_user(
-    db: Session = Depends(get_db),
+async def read_user(
+    session: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(get_current_user)
 ):
     """
     Возвращает данные о своем профиле.
 
     Args:
-    - `db`: Сессия базы данных.
+    - `session`: Сессия базы данных.
     - `current_user`: Текущий пользователь.
 
     Returns:
@@ -141,8 +136,8 @@ def read_user(
     if not current_user:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
-    db_user = crud.get_user_by_username(
-        db, username=current_user.get('username')
+    db_user = await crud.get_user_by_username(
+        session, username=current_user.get('username')
     )
     if db_user is None:
         raise HTTPException(status_code=404, detail="User not found")
@@ -153,9 +148,9 @@ def read_user(
     "/users/get-staff-status/",
     status_code=status.HTTP_200_OK
 )
-def get_staff(
+async def get_staff(
     code: dict,
-    db: Session = Depends(get_db),
+    session: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(get_current_user)
 ):
     """
@@ -163,7 +158,7 @@ def get_staff(
 
     Args:
     - `code`: Словарь с кодом авторизации.
-    - `db`: Сессия базы данных.
+    - `session`: Сессия базы данных.
     - `current_user`: Текущий пользователь.
 
     Returns:
@@ -177,5 +172,5 @@ def get_staff(
         raise HTTPException(
             status_code=400, detail="Incorrect secret code"
         )
-    db_user = crud.set_status_staff(db, user=current_user)
+    db_user = await crud.set_status_staff(session, user=current_user)
     return {"Status Staff": db_user.is_staff}

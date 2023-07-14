@@ -1,6 +1,6 @@
-from datetime import datetime, timezone
+from datetime import datetime
 
-from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, event
+from sqlalchemy import TIMESTAMP, Column, Float, ForeignKey, Integer, event
 from sqlalchemy.orm import relationship
 
 from ..database import Base
@@ -27,7 +27,7 @@ class Salary(Base):
     employee_id = Column(Integer, ForeignKey("users.id"))
     current_rate = Column(Float)
     rate_increase_period = Column(Integer)
-    last_promotion_date = Column(DateTime)
+    last_promotion_date = Column(TIMESTAMP)
 
     employee = relationship("User", back_populates="salaries")
 
@@ -52,5 +52,5 @@ class Salary(Base):
         """
 
         @event.listens_for(cls.current_rate, "set")
-        def receive_set(target, value, oldvalue, initiator):
-            target.last_promotion_date = datetime.now(timezone.utc)
+        def receive_set(target, *args, **kwargs):
+            target.last_promotion_date = datetime.now()

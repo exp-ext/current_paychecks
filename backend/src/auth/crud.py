@@ -1,46 +1,49 @@
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from . import models, schemas
 
 
-def get_user(
-    db: Session,
+async def get_user(
+    session: AsyncSession,
     user_id: int
 ):
     """
     Получает пользователя по идентификатору.
 
     Args:
-    - `db`: Сеанс базы данных.
+    - `session`: Сеанс базы данных.
     - `user_id`: Идентификатор пользователя.
 
     Returns:
     - Объект модели User.
     """
-    return db.query(models.User).filter(models.User.id == user_id).first()
+    query = select(models.User).where(models.User.id == user_id)
+    result = await session.execute(query)
+    return result.scalars().first()
 
 
-def get_user_by_username(
-    db: Session,
+async def get_user_by_username(
+    session: AsyncSession,
     username: str
 ):
     """
     Получает пользователя по имени пользователя.
 
     Args:
-    - `db`: Сеанс базы данных.
+    - `session`: Сеанс базы данных.
     - `username`: Имя пользователя.
 
     Returns:
     - Объект модели User.
     """
-    return db.query(models.User).filter(
-        models.User.username == username
-    ).first()
+    query = select(models.User).where(models.User.username == username)
+    result = await session.execute(query)
+    return result.scalars().first()
 
 
-def get_users(
-    db: Session,
+async def get_users(
+    session: AsyncSession,
     skip: int = 0,
     limit: int = 20
 ):
@@ -48,25 +51,27 @@ def get_users(
     Получает список пользователей с пагинацией.
 
     Args:
-    - `db`: Сеанс базы данных.
+    - `session`: Сеанс базы данных.
     - `skip`: Количество пропускаемых пользователей.
     - `limit`: Максимальное количество возвращаемых пользователей.
 
     Returns:
     - Список объектов модели User.
     """
-    return db.query(models.User).offset(skip).limit(limit).all()
+    query = select(models.User).offset(skip).limit(limit)
+    result = await session.execute(query)
+    return result.scalars().all()
 
 
-def create_user(
-    db: Session,
+async def create_user(
+    session: AsyncSession,
     user: schemas.UserCreate
 ):
     """
     Создает нового пользователя.
 
     Args:
-    - `db`: Сеанс базы данных.
+    - `session`: Сеанс базы данных.
     - `user`: Схема создания пользователя.
 
     Returns:
@@ -74,14 +79,14 @@ def create_user(
     """
     db_user = models.User(username=user.username)
     db_user.set_password(user.password)
-    db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
+    session.add(db_user)
+    await session.commit()
+    await session.refresh(db_user)
     return db_user
 
 
-def set_status_staff(
-    db: Session,
+async def set_status_staff(
+    session: AsyncSession,
     user: schemas.User
 ):
     """
@@ -94,8 +99,10 @@ def set_status_staff(
     Returns:
     - Обновленный объект модели User.
     """
-    db_user = get_user_by_username(db, username=user.get("username"))
+    db_user = await get_user_by_username(
+        session, username=user.get("username")
+    )
     db_user.is_staff = True
-    db.commit()
-    db.refresh(db_user)
+    await session.commit()
+    await session.refresh(db_user)
     return db_user

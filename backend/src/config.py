@@ -22,16 +22,9 @@ class Settings(BaseSettings):
     @property
     def database_url(self) -> str:
         return (
-            f'postgresql://{quote_plus(self.database_user)}'
+            f'postgresql+asyncpg://{quote_plus(self.database_user)}'
             f':{quote_plus(self.database_password)}'
             f'@{self.database_host}:{self.database_port}/{self.database_name}')
-
-    @property
-    def database_test_url(self) -> str:
-        return (
-            f'postgresql://{quote_plus(self.database_user)}'
-            f':{quote_plus(self.database_password)}'
-            f'@{self.db_host_test}:{self.db_port_test}/{self.db_name_test}')
 
     class Config:
         env_file = ".env"

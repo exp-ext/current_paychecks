@@ -1,19 +1,14 @@
 from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth import crud as user_crud
 from ..auth.middleware import get_current_user, get_current_user_if_staff
-from ..database import engine, get_db
-from . import crud, models, schemas
+from ..database import get_async_session
+from . import crud, schemas
 
-models.Base.metadata.create_all(bind=engine)
-
-router = APIRouter(
-    prefix="/api/salary",
-    tags=["salary"]
-)
+router = APIRouter()
 
 
 @router.post(
@@ -21,48 +16,48 @@ router = APIRouter(
     status_code=status.HTTP_201_CREATED,
     dependencies=[Depends(get_current_user_if_staff)]
 )
-def create_salary(
+async def create_salary(
     salary: schemas.SalaryCreate,
-    db: Session = Depends(get_db),
+    session: AsyncSession = Depends(get_async_session),
 ):
     """
     Устанавливает ставку зарплаты для сотрудника.
 
     Args:
     - `salary`: Схема создания зарплаты сотрудника.
-    - `db`: Сеанс базы данных.
+    - `session`: Сеанс базы данных.
 
     Returns:
     - Созданный объект модели зарплаты.
     """
-    db_user = user_crud.get_user(db, user_id=salary.employee_id)
+    db_user = await user_crud.get_user(session, user_id=salary.employee_id)
     if not db_user:
         raise HTTPException(
             status_code=404, detail="No such user"
         )
-    return crud.create_an_employee_salary(db, salary=salary)
+    return await crud.create_an_employee_salary(session, salary=salary)
 
 
 @router.get(
     "/next-pay-raise/",
     status_code=status.HTTP_200_OK
 )
-def get_next_pay_raise(
-    db: Session = Depends(get_db),
+async def get_next_pay_raise(
+    session: AsyncSession = Depends(get_async_session),
     current_user: dict = Depends(get_current_user)
 ):
     """
     Получает ставку и дату следующего повышения зарплаты.
 
     Args:
-    - `db`: Сеанс базы данных.
+    - `session`: Сеанс базы данных.
     - `current_user`: Текущий аутентифицированный пользователь.
 
     Returns:
     - Словарь с текущей ставкой и датой следующего повышения зарплаты.
     """
-    salaries = crud.get_salaries_by_username(
-        db, username=current_user.get('username')
+    salaries = await crud.get_salaries_by_username(
+        session, username=current_user.get('username')
     )
     if len(salaries) == 0:
         raise HTTPException(

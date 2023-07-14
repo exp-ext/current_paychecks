@@ -1,39 +1,39 @@
-from sqlalchemy import create_engine
+from typing import AsyncGenerator
+
+from sqlalchemy import MetaData
+from sqlalchemy.ext.asyncio import (AsyncSession, async_sessionmaker,
+                                    create_async_engine)
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 from .config import settings
 
-DATABASE_URL = settings.database_url
+engine = create_async_engine(settings.database_url)
+async_session_maker = async_sessionmaker(engine, expire_on_commit=False)
+metadata = MetaData()
 
-engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 
-def get_db():
+class Base(DeclarativeBase):
+    pass
+
+
+async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
     """
     Возвращает экземпляр сессии базы данных.
 
     Yields:
     - Сессия базы данных.
-
-    Closes:
-    - Закрывает сессию базы данных после использования.
     """
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+    async with async_session_maker() as session:
+        yield session
 
 
-def create_tables():
+async def create_db_and_tables():
     """
     Создает таблицы в базе данных.
-
-    Notes:
-    - Для создания таблиц необходимо импортировать модели данных
-    (модели, унаследованные от Base).
     """
-    Base.metadata.create_all(bind=engine)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)

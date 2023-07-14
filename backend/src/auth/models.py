@@ -1,7 +1,7 @@
-from datetime import datetime, timezone
+from datetime import datetime
 
 from passlib.context import CryptContext
-from sqlalchemy import Boolean, Column, DateTime, Integer, String
+from sqlalchemy import TIMESTAMP, Boolean, Column, Integer, String
 from sqlalchemy.orm import Session, relationship
 
 from ..database import Base
@@ -39,13 +39,13 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=True)
     hashed_password = Column(String, nullable=False)
 
-    last_login = Column(DateTime)
+    last_login = Column(TIMESTAMP)
 
     is_active = Column(Boolean(), default=True)
     is_staff = Column(Boolean(), default=False)
 
     salaries = relationship(
-        "Salary", back_populates="employee", lazy="dynamic"
+        "Salary", back_populates="employee"
     )
 
     def set_password(self, password: str):
@@ -72,7 +72,7 @@ class User(Base):
         """
         return password_context.verify(password, self.hashed_password)
 
-    def login(self, db: Session):
+    async def login(self, session: Session):
         """
         Выполняет операцию авторизации пользователя.
 
@@ -82,6 +82,6 @@ class User(Base):
         Returns:
         - None.
         """
-        self.last_login = datetime.now(timezone.utc)
-        db.add(self)
-        db.commit()
+        self.last_login = datetime.now()
+        session.add(self)
+        await session.commit()
